@@ -273,3 +273,65 @@ fig.update_layout(
 # Display the figure
 st.plotly_chart(fig, use_container_width=True)
 
+
+
+# ====================================================
+# 10. Error Heatmap (Crucial Graph)
+# ====================================================
+import seaborn as sns
+
+st.subheader("Error Distribution Heatmap")
+
+for scenario_name in selected_scenarios:
+    res = scenario_results[scenario_name]
+    errors = res["y_test"] - res["mean_pred"]
+    error_df = pd.DataFrame(errors, columns=[f"Step {i+1}" for i in range(errors.shape[1])])
+    
+    fig_err, ax = plt.subplots(figsize=(10, 4))
+    sns.heatmap(error_df.T, cmap="RdBu_r", center=0, cbar_kws={'label': 'Error'})
+    ax.set_title(f"Forecast Error Heatmap – {scenario_name}")
+    ax.set_xlabel("Test Sample Index")
+    ax.set_ylabel("Forecast Horizon Step")
+    st.pyplot(fig_err)
+
+# ====================================================
+# 11. Animated GIF of Forecast Evolution
+# ====================================================
+import matplotlib.animation as animation
+
+scenario_name = selected_scenarios[0]  # take first scenario
+res = scenario_results[scenario_name]
+
+fig_anim, ax_anim = plt.subplots()
+line_true, = ax_anim.plot([], [], lw=2, label="True Solar Output", color="blue")
+line_pred, = ax_anim.plot([], [], lw=2, ls='--', label="Predicted Solar Output", color="orange")
+
+ax_anim.set_xlim(0, len(res["y_test"]))
+ax_anim.set_ylim(
+    min(res["y_test"].min(), res["mean_pred"].min())-2,
+    max(res["y_test"].max(), res["mean_pred"].max())+2
+)
+ax_anim.set_title(f"Forecast Evolution – {scenario_name} Scenario", fontsize=14)
+ax_anim.set_xlabel("Test Sample Index", fontsize=12)
+ax_anim.set_ylabel("Solar Output", fontsize=12)
+ax_anim.legend()
+
+def init():
+    line_true.set_data([], [])
+    line_pred.set_data([], [])
+    return line_true, line_pred
+
+def animate(i):
+    x = np.arange(i+1)
+    line_true.set_data(x, res["y_test"][:i+1, 0])   # first horizon step
+    line_pred.set_data(x, res["mean_pred"][:i+1, 0])
+    return line_true, line_pred
+
+ani = animation.FuncAnimation(fig_anim, animate, init_func=init,
+                              frames=len(res["y_test"]), interval=200, blit=True)
+
+# Save GIF
+gif_path = os.path.join(tempfile.gettempdir(), "forecast_animation.gif")
+ani.save(gif_path, writer="pillow")
+
+st.image(gif_path, caption=f"Forecast Evolution Animation – {scenario_name}")
