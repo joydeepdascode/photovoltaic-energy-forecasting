@@ -7,3 +7,4 @@ plotly>=5.20.0
 tensorflow>=2.15.0
 xgboost>=1.7.6
 fpdf>=1.7.2
+seaborn>=0.13.0
